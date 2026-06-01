@@ -127,27 +127,29 @@ pub fn create_router(
         routing::get(health_check::handler).with_state(server_health.clone()),
     );
 
-    let presigned_router = Router::new()
-        .route(
-            "/presigned/{repository_id}/{address}",
-            routing::get(presigned::handler),
-        )
-        .with_state(Arc::new(shared_state.clone()));
-
     crate::store::spawn_immutable_store_availability_monitor(server_health);
 
-    Router::new()
+    let mut router = Router::new()
         .merge(unauthenticated_router)
-        .nest("/v1", authenticated_router)
-        .nest("/v1", presigned_router)
-        .layer(HttpMetricsLayer::new())
+        .nest("/v1", authenticated_router);
+
+    if shared_state.presign_config.is_some() {
+        let presigned_router = Router::new()
+            .route(
+                "/presigned/{repository_id}/{address}",
+                routing::get(presigned::handler),
+            )
+            .with_state(Arc::new(shared_state.clone()));
+        router = router.nest("/v1", presigned_router);
+    }
+
+    router.layer(HttpMetricsLayer::new())
 }
 
-fn build_presign_config(settings: &PresignSettings) -> Result<PresignConfig> {
-    let key_hex = settings
-        .hmac_key
-        .as_deref()
-        .ok_or_else(|| anyhow::anyhow!("presigned_url_hmac_key is required but not configured"))?;
+fn build_presign_config(settings: &PresignSettings) -> Result<Option<PresignConfig>> {
+    let Some(key_hex) = settings.hmac_key.as_deref() else {
+        return Ok(None);
+    };
 
     let key_bytes = hex::decode(key_hex)
         .map_err(|e| anyhow::anyhow!("presigned_url_hmac_key is not valid hex: {e}"))?;
@@ -162,13 +164,13 @@ fn build_presign_config(settings: &PresignSettings) -> Result<PresignConfig> {
     let key_id = blake3::hash(&key_bytes).to_hex()[..16].to_string();
     let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &key_bytes);
 
-    Ok(PresignConfig {
+    Ok(Some(PresignConfig {
         hmac_key,
         key_id,
         min_ttl_seconds: settings.min_ttl_seconds,
         default_ttl_seconds: settings.default_ttl_seconds,
         max_ttl_seconds: settings.max_ttl_seconds,
-    })
+    }))
 }
 
 impl LoreHttpServer {
@@ -242,13 +244,18 @@ impl LoreHttpServer {
         };
 
         let presign_config = build_presign_config(&settings.presign)?;
+        if let Some(cfg) = presign_config.as_ref() {
+            info!("Presigned URL feature enabled (key_id: {})", cfg.key_id);
+        } else {
+            info!("Presigned URL feature disabled (presigned_url_hmac_key not configured)");
+        }
 
         let shared_state = ServerState {
             immutable_store,
             mutable_store,
             jwt_verifier,
             max_file_size: settings.max_file_size,
-            presign_config: Some(presign_config),
+            presign_config,
         };
 
         let app = create_router(shared_state, health, &settings);

@@ -55,9 +55,11 @@ impl IntoResponse for PresignError {
             e @ (PresignError::ParseRepository(_) | PresignError::ParseAddress(_)) => {
                 (StatusCode::BAD_REQUEST, e.to_string())
             }
-            PresignError::NotConfigured
-            | PresignError::StoreError
-            | PresignError::SystemTime(_) => (
+            PresignError::NotConfigured => (
+                StatusCode::NOT_FOUND,
+                "presigned URL feature is not enabled".to_string(),
+            ),
+            PresignError::StoreError | PresignError::SystemTime(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Something went wrong. See server log for more info.".to_string(),
             ),

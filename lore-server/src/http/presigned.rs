@@ -76,9 +76,11 @@ impl IntoResponse for RedeemError {
             {
                 (StatusCode::NOT_FOUND, "address not found".to_string())
             }
-            RedeemError::NotConfigured
-            | RedeemError::ReadStream(_)
-            | RedeemError::HeaderGeneration(_) => (
+            RedeemError::NotConfigured => (
+                StatusCode::NOT_FOUND,
+                "presigned URL feature is not enabled".to_string(),
+            ),
+            RedeemError::ReadStream(_) | RedeemError::HeaderGeneration(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Something went wrong. See server log for more info.".to_string(),
             ),
