@@ -121,6 +121,10 @@ pub struct LoreCli {
     #[clap(global = true, long, action)]
     sync_data: bool,
 
+    /// Cache fragment payloads fetched from remote in the local store
+    #[clap(global = true, long, action)]
+    pub cache: bool,
+
     /// Disable interactive prompts (e.g., per-link commit messages)
     #[clap(global = true, long, action)]
     pub non_interactive: bool,
@@ -353,6 +357,7 @@ pub fn lore_globals_from_args(cli: &LoreCli) -> LoreGlobalArgs {
         local: cli.local.into(),
         gc: cli.gc.into(),
         sync_data: cli.sync_data.into(),
+        cache: cli.cache.into(),
 
         identity: cli.identity.clone().into(),
 

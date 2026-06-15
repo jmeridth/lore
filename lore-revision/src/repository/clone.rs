@@ -880,7 +880,6 @@ pub async fn clone(
             RepositoryFormat::Lore,
         ));
 
-        repository.set_disable_cache(true);
         repository.set_disable_upload(true);
 
         repository::metadata(repository, repository_data.metadata)
@@ -988,7 +987,6 @@ pub async fn clone(
     let repository = Arc::new(new_context);
 
     repository.set_disable_upload(true);
-    repository.set_disable_cache(true);
 
     // Prune stale instances in the background when using a shared store.
     // AbortOnDropHandle ensures the task is cancelled if clone fails early.

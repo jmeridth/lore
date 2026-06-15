@@ -529,6 +529,10 @@ pub struct LoreGlobalArgs {
     pub store_keep_alive_seconds: u64,
     /// Force sync data to storage media during store flush
     pub sync_data: u8,
+    /// Cache fragment payloads fetched from remote in the local store. Without
+    /// this only state fragments and fragments flagged for local cache priority
+    /// are retained
+    pub cache: u8,
 }
 
 impl LoreGlobalArgs {
@@ -608,6 +612,10 @@ impl LoreGlobalArgs {
 
     pub fn sync_data(&self) -> bool {
         self.sync_data != 0
+    }
+
+    pub fn cache(&self) -> bool {
+        self.cache != 0
     }
 
     /// Returns the store keep-alive duration if enabled.

@@ -282,7 +282,7 @@ impl Default for RepositoryRuntimeSettings {
     fn default() -> Self {
         RepositoryRuntimeSettings {
             disable_upload: AtomicBool::new(true),
-            disable_cache: AtomicBool::new(false),
+            disable_cache: AtomicBool::new(true),
             direct_file_write: AtomicBool::new(false),
             direct_file_io: AtomicBool::new(false),
         }
@@ -1926,6 +1926,7 @@ pub async fn load_and_connect_with_token(
     let config_file = config.file.unwrap_or_default();
     repository.set_direct_file_write(config_file.direct_write.unwrap_or_default());
     repository.set_direct_file_io(config_file.direct_io.unwrap_or_default());
+    repository.set_disable_cache(!global.cache());
 
     if global.local() {
         repository.set_disable_upload(true);
